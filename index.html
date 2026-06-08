@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Gửi một lời ước nguyện và lưu lại khoảnh khắc của bạn."
+    />
+    <title>Gửi một ước nguyện</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="artwork" aria-hidden="true">
+      <span class="bubble bubble--one"></span>
+      <span class="bubble bubble--two"></span>
+      <span class="bubble bubble--three"></span>
+      <span class="bubble bubble--four"></span>
+      <span class="orbit orbit--one"></span>
+      <span class="orbit orbit--two"></span>
+    </div>
+
+    <main class="page-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Một khoảng lặng dành cho bạn</p>
+        <h1 id="page-title">Gửi một<br /><em>ước nguyện.</em></h1>
+        <p class="intro__copy">
+          Có những điều chỉ cần được viết ra đã trở nên gần hơn một chút. Hãy để
+          lại lời nhắn cùng một khoảnh khắc bạn muốn lưu giữ.
+        </p>
+        <div class="signature" aria-hidden="true">
+          <span></span>
+          <span>Mong điều lành sẽ đến</span>
+        </div>
+      </section>
+
+      <section class="form-panel" aria-label="Biểu mẫu gửi ước nguyện">
+        <div class="form-panel__header">
+          <span class="step-number">01</span>
+          <p>Thông tin của bạn</p>
+        </div>
+
+        <form id="wish-form" novalidate>
+          <div class="field">
+            <label for="full-name">Họ và tên <span>*</span></label>
+            <input
+              id="full-name"
+              name="fullName"
+              type="text"
+              autocomplete="name"
+              placeholder="Nguyễn Minh Anh"
+              required
+            />
+            <small class="field-error" id="full-name-error"></small>
+          </div>
+
+          <div class="field">
+            <label for="phone">Số điện thoại <span>*</span></label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel"
+              placeholder="09xx xxx xxx"
+              required
+            />
+            <small class="field-error" id="phone-error"></small>
+          </div>
+
+          <div class="field">
+            <label for="wish">Ước nguyện <span>*</span></label>
+            <textarea
+              id="wish"
+              name="wish"
+              rows="4"
+              placeholder="Viết điều bạn đang mong chờ..."
+              required
+            ></textarea>
+            <small class="field-error" id="wish-error"></small>
+          </div>
+
+          <div class="field">
+            <label for="image-file">Hình ảnh <span>*</span></label>
+            <div
+              class="drop-zone"
+              id="drop-zone"
+              role="button"
+              tabindex="0"
+              aria-describedby="image-help image-error"
+            >
+              <input
+                id="image-file"
+                name="imageFile"
+                type="file"
+                accept="image/*"
+              />
+              <input id="image-url" name="imageUrl" type="hidden" />
+              <div class="upload-prompt" id="upload-prompt">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"
+                  />
+                </svg>
+                <strong>Kéo thả ảnh vào đây</strong>
+                <span>hoặc nhấn để chọn ảnh</span>
+              </div>
+              <div class="upload-preview" id="upload-preview" hidden>
+                <img id="preview-image" alt="Ảnh đã chọn" />
+                <div>
+                  <strong id="file-name"></strong>
+                  <span id="upload-state">Đang chuẩn bị tải lên...</span>
+                </div>
+              </div>
+            </div>
+            <small class="field-help" id="image-help"
+              >JPG, PNG hoặc WebP, tối đa 5 MB.</small
+            >
+            <small class="field-error" id="image-error"></small>
+          </div>
+
+          <button class="submit-button" id="submit-button" type="submit">
+            <span>Gửi ước nguyện</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14m-5-5 5 5-5 5" />
+            </svg>
+          </button>
+
+          <p
+            class="form-status"
+            id="form-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </form>
+      </section>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

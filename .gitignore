@@ -1,0 +1,13 @@
+# AI Agents
+.claude/
+.codex/
+
+# Node
+node_modules/
+dist/
+
+# Generated public runtime config
+config.js
+.env
+.env.*
+!.env.example
