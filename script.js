@@ -14,8 +14,30 @@ const fileName = document.querySelector("#file-name");
 const uploadState = document.querySelector("#upload-state");
 const submitButton = document.querySelector("#submit-button");
 const formStatus = document.querySelector("#form-status");
+const fireworksCanvas = document.querySelector("#fireworks-canvas");
+const celebration = document.querySelector("#celebration");
+const replayFireworksButton = document.querySelector("#replay-fireworks");
+const fireworksContext = fireworksCanvas.getContext("2d");
 
 let isUploading = false;
+let fireworksFrame = 0;
+let fireworksTimeout = 0;
+let launchTimeouts = [];
+let rockets = [];
+let sparks = [];
+
+const fireworkColors = [
+  "#ff6b35",
+  "#ffb627",
+  "#7ac143",
+  "#0e76bc",
+  "#ff4f81",
+  "#9b5de5",
+  "#f8f7ff",
+];
+
+replayFireworksButton.addEventListener("click", startFireworks);
+window.addEventListener("resize", resizeFireworksCanvas);
 
 dropZone.addEventListener("click", (event) => {
   if (event.target !== fileInput && !isUploading) fileInput.click();
@@ -67,6 +89,7 @@ form.addEventListener("submit", async (event) => {
     form.reset();
     resetUpload();
     setFormStatus("Ước nguyện đã được gửi. Cảm ơn bạn đã chia sẻ.", "success");
+    startFireworks();
   } catch (error) {
     setFormStatus(
       error.message || "Chưa thể gửi biểu mẫu. Vui lòng thử lại.",
@@ -240,6 +263,184 @@ function setSubmitting(value) {
 function setFormStatus(message, type = "") {
   formStatus.textContent = message;
   formStatus.className = `form-status${type ? ` is-${type}` : ""}`;
+}
+
+function startFireworks() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    replayFireworksButton.hidden = true;
+    return;
+  }
+
+  stopFireworks();
+  resizeFireworksCanvas();
+  celebration.classList.add("is-active");
+  replayFireworksButton.hidden = true;
+
+  const isMobile = window.innerWidth < 600;
+  const columns = isMobile ? 4 : 8;
+  const launchCount = isMobile ? 16 : 30;
+  const launchInterval = isMobile ? 330 : 290;
+
+  for (let index = 0; index < launchCount; index += 1) {
+    const column = index % columns;
+    const xRatio = (column + 0.5 + randomBetween(-0.24, 0.24)) / columns;
+    const delay = index * launchInterval + randomBetween(0, 180);
+    const heightBand = index % 5;
+    launchTimeouts.push(window.setTimeout(() => launchFirework(xRatio, heightBand), delay));
+  }
+
+  animateFireworks();
+  fireworksTimeout = window.setTimeout(() => {
+    celebration.classList.remove("is-active");
+    replayFireworksButton.hidden = false;
+  }, launchCount * launchInterval + 4600);
+}
+
+function stopFireworks() {
+  cancelAnimationFrame(fireworksFrame);
+  clearTimeout(fireworksTimeout);
+  celebration.classList.remove("is-active");
+  launchTimeouts.forEach(clearTimeout);
+  launchTimeouts = [];
+  rockets = [];
+  sparks = [];
+  fireworksContext.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+}
+
+function resizeFireworksCanvas() {
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  fireworksCanvas.width = window.innerWidth * pixelRatio;
+  fireworksCanvas.height = window.innerHeight * pixelRatio;
+  fireworksContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+}
+
+function launchFirework(xRatio, heightBand = 0) {
+  const startX = window.innerWidth * xRatio;
+  const heightRanges = [
+    [0.06, 0.2],
+    [0.2, 0.36],
+    [0.36, 0.52],
+    [0.52, 0.68],
+    [0.68, 0.82],
+  ];
+  const [minimumHeight, maximumHeight] = heightRanges[heightBand];
+  const targetY = window.innerHeight * randomBetween(minimumHeight, maximumHeight);
+  const color = fireworkColors[Math.floor(Math.random() * fireworkColors.length)];
+  const travelDistance = window.innerHeight - targetY;
+
+  rockets.push({
+    x: startX,
+    y: window.innerHeight + 20,
+    previousX: startX,
+    previousY: window.innerHeight + 20,
+    velocityX: randomBetween(-0.8, 0.8),
+    velocityY: -Math.sqrt(2 * 0.075 * travelDistance) * randomBetween(1.08, 1.22),
+    targetY,
+    color,
+    brightness: randomBetween(0.72, 1),
+  });
+}
+
+function explodeFirework(rocket) {
+  const particleCount = window.innerWidth < 600 ? 58 : 82;
+  const shapeRoll = Math.random();
+
+  for (let index = 0; index < particleCount; index += 1) {
+    const angle = (Math.PI * 2 * index) / particleCount + randomBetween(-0.035, 0.035);
+    let speed = randomBetween(2.2, 6.7);
+
+    if (shapeRoll > 0.72) {
+      speed *= index % 2 ? 0.58 : 1;
+    }
+
+    sparks.push({
+      x: rocket.x,
+      y: rocket.y,
+      previousX: rocket.x,
+      previousY: rocket.y,
+      velocityX: Math.cos(angle) * speed,
+      velocityY: Math.sin(angle) * speed,
+      gravity: randomBetween(0.045, 0.085),
+      friction: randomBetween(0.965, 0.982),
+      alpha: 1,
+      decay: randomBetween(0.009, 0.016),
+      color:
+        Math.random() > 0.8
+          ? fireworkColors[Math.floor(Math.random() * fireworkColors.length)]
+          : rocket.color,
+      size: randomBetween(1.1, 2.2),
+      twinkle: Math.random() > 0.62,
+    });
+  }
+}
+
+function animateFireworks() {
+  fireworksContext.globalCompositeOperation = "destination-out";
+  fireworksContext.fillStyle = "rgba(0, 0, 0, 0.16)";
+  fireworksContext.fillRect(0, 0, window.innerWidth, window.innerHeight);
+  fireworksContext.globalCompositeOperation = "lighter";
+
+  rockets = rockets.filter((rocket) => {
+    rocket.previousX = rocket.x;
+    rocket.previousY = rocket.y;
+    rocket.x += rocket.velocityX;
+    rocket.y += rocket.velocityY;
+    rocket.velocityY += 0.075;
+
+    drawTrail(rocket.previousX, rocket.previousY, rocket.x, rocket.y, rocket.color, 2);
+
+    if (rocket.y <= rocket.targetY || rocket.velocityY >= -1.2) {
+      explodeFirework(rocket);
+      return false;
+    }
+
+    return true;
+  });
+
+  sparks = sparks.filter((spark) => {
+    spark.previousX = spark.x;
+    spark.previousY = spark.y;
+    spark.velocityX *= spark.friction;
+    spark.velocityY = spark.velocityY * spark.friction + spark.gravity;
+    spark.x += spark.velocityX;
+    spark.y += spark.velocityY;
+    spark.alpha -= spark.decay;
+
+    if (!spark.twinkle || Math.random() > 0.28) {
+      drawTrail(
+        spark.previousX,
+        spark.previousY,
+        spark.x,
+        spark.y,
+        spark.color,
+        spark.size,
+        spark.alpha,
+      );
+    }
+
+    return spark.alpha > 0;
+  });
+
+  if (rockets.length || sparks.length || replayFireworksButton.hidden) {
+    fireworksFrame = requestAnimationFrame(animateFireworks);
+  }
+}
+
+function drawTrail(fromX, fromY, toX, toY, color, width, alpha = 1) {
+  fireworksContext.save();
+  fireworksContext.globalAlpha = Math.max(alpha, 0);
+  fireworksContext.strokeStyle = color;
+  fireworksContext.lineWidth = width;
+  fireworksContext.lineCap = "round";
+  fireworksContext.beginPath();
+  fireworksContext.moveTo(fromX, fromY);
+  fireworksContext.lineTo(toX, toY);
+  fireworksContext.stroke();
+  fireworksContext.restore();
+}
+
+function randomBetween(minimum, maximum) {
+  return Math.random() * (maximum - minimum) + minimum;
 }
 
 function ensureSupabaseConfigured() {

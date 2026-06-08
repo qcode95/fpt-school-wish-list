@@ -37,6 +37,10 @@ Google Forms requires `mode: "no-cors"` from a static site. The browser can
 confirm that it dispatched the request, but cannot read Google's response.
 Verify the first real submission in the linked Google Sheet.
 
+After a successful submission, the page runs a full-screen canvas fireworks
+celebration and exposes a replay button when the animation ends. The effect is
+disabled automatically for visitors who prefer reduced motion.
+
 ## Supabase checklist
 
 1. Create a public bucket matching `CONFIG.supabase.bucket`.
