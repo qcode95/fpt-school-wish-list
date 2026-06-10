@@ -106,16 +106,36 @@ button {
     forwards;
 }
 
+.celebration-card--person {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 8px;
+}
+
+.celebration-card--field {
+  width: min(320px, calc(100vw - 32px));
+}
+
 .celebration-card--image {
   width: min(210px, calc(100vw - 48px));
   padding: 7px;
   border-radius: 24px;
 }
 
+.celebration-card--image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
 .celebration-card__label {
   display: block;
   margin-bottom: 5px;
-  color: rgba(255, 190, 125, 0.96);
+  color: rgba(255, 190, 125, 0.98);
   font-family: "Be Vietnam Pro", sans-serif;
   font-size: 10px;
   font-weight: 700;
@@ -138,16 +158,46 @@ button {
   -webkit-line-clamp: 4;
 }
 
-.celebration-card--image img {
+.celebration-card--person img {
   display: block;
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  border-radius: 18px;
+  width: 112px;
+  height: 108px;
+  border-radius: 14px;
   object-fit: cover;
 }
 
+.celebration-card__content {
+  align-self: center;
+  min-width: 0;
+  padding: 3px 8px 3px 0;
+}
+
+.celebration-card__name {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255, 190, 125, 0.98);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.celebration-card__wish {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .celebration.is-reduced {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .celebration.is-reduced::before {
@@ -156,11 +206,13 @@ button {
 
 .celebration.is-reduced .celebration-content {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 300px));
-  align-content: center;
+  grid-template-columns: repeat(2, minmax(0, 360px));
+  align-content: start;
   justify-content: center;
   gap: 12px;
   padding: 24px;
+  overflow-y: auto;
+  pointer-events: auto;
 }
 
 .celebration.is-reduced .celebration-card {
@@ -171,11 +223,6 @@ button {
   transform: none;
   opacity: 1;
   animation: none;
-}
-
-.celebration.is-reduced .celebration-card--image {
-  justify-self: center;
-  max-width: 210px;
 }
 
 .replay-fireworks {
@@ -214,6 +261,11 @@ button {
 
 .replay-fireworks[hidden] {
   display: none;
+}
+
+.replay-fireworks:disabled {
+  cursor: wait;
+  opacity: 0.76;
 }
 
 .bubble {
@@ -883,9 +935,19 @@ h1 em {
 
 @media (max-width: 480px) {
   .celebration-card {
-    width: min(250px, calc(100vw - 28px));
+    width: min(288px, calc(100vw - 28px));
     padding: 11px 13px;
     border-radius: 16px;
+  }
+
+  .celebration-card--person {
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 9px;
+    padding: 7px;
+  }
+
+  .celebration-card--field {
+    width: min(260px, calc(100vw - 28px));
   }
 
   .celebration-card--image {
@@ -898,6 +960,21 @@ h1 em {
     -webkit-line-clamp: 3;
   }
 
+  .celebration-card--person img {
+    width: 86px;
+    height: 86px;
+    border-radius: 12px;
+  }
+
+  .celebration-card__name {
+    font-size: 12px;
+  }
+
+  .celebration-card__wish {
+    font-size: 11px;
+    -webkit-line-clamp: 2;
+  }
+
   .celebration.is-reduced .celebration-content {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -906,10 +983,6 @@ h1 em {
 
   .celebration.is-reduced .celebration-card {
     width: 100%;
-  }
-
-  .celebration.is-reduced .celebration-card--image {
-    max-width: 130px;
   }
 
   .page-shell {

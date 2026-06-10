@@ -26,7 +26,7 @@ let fireworksTimeout = 0;
 let launchTimeouts = [];
 let rockets = [];
 let sparks = [];
-let lastCelebrationData = null;
+let lastSubmittedWish = null;
 
 const fireworkColors = [
   "#ff6b35",
@@ -38,7 +38,7 @@ const fireworkColors = [
   "#f8f7ff",
 ];
 
-replayFireworksButton.addEventListener("click", startFireworks);
+replayFireworksButton.addEventListener("click", replayAllWishes);
 window.addEventListener("resize", resizeFireworksCanvas);
 
 dropZone.addEventListener("click", (event) => {
@@ -87,13 +87,14 @@ form.addEventListener("submit", async (event) => {
   setFormStatus("Đang gửi lời ước nguyện của bạn...");
 
   try {
-    const submittedCelebrationData = getCelebrationData();
+    const submittedWish = getSubmittedWish();
+    await saveWish(submittedWish);
     await submitToGoogleForm();
-    lastCelebrationData = submittedCelebrationData;
+    lastSubmittedWish = submittedWish;
     form.reset();
     resetUpload();
     setFormStatus("Ước nguyện đã được gửi. Cảm ơn bạn đã chia sẻ.", "success");
-    startFireworks();
+    startFireworks([submittedWish], "submit");
   } catch (error) {
     setFormStatus(
       error.message || "Chưa thể gửi biểu mẫu. Vui lòng thử lại.",
@@ -269,41 +270,71 @@ function setFormStatus(message, type = "") {
   formStatus.className = `form-status${type ? ` is-${type}` : ""}`;
 }
 
-function getCelebrationData() {
-  return [
-    { label: "Họ và tên", value: form.fullName.value.trim() },
-    { label: "Số điện thoại", value: form.phone.value.trim() },
-    { label: "Ước nguyện", value: form.wish.value.trim() },
-    {
-      label: "Khoảnh khắc của bạn",
-      imageUrl: imageUrlInput.value,
-      alt: `Ảnh của ${form.fullName.value.trim()}`,
-    },
-  ];
+function getSubmittedWish() {
+  return {
+    fullName: form.fullName.value.trim(),
+    wish: form.wish.value.trim(),
+    imageUrl: imageUrlInput.value,
+  };
 }
 
-function startFireworks() {
-  if (!lastCelebrationData) return;
+async function replayAllWishes() {
+  replayFireworksButton.disabled = true;
+  replayFireworksButton.textContent = "Đang tải ước nguyện...";
 
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    stopFireworks();
-    celebration.classList.add("is-active", "is-reduced");
-    lastCelebrationData.forEach((item) => showCelebrationCard(item, 50, 50));
-    replayFireworksButton.hidden = true;
-    fireworksTimeout = window.setTimeout(stopFireworks, 7000);
-    return;
+  try {
+    const wishes = await fetchAllWishes();
+    if (!wishes.length) {
+      throw new Error("Chưa có ước nguyện nào để phát lại.");
+    }
+    startFireworks(wishes, "replay");
+  } catch (error) {
+    setFormStatus(error.message || "Chưa thể bắn lại pháo hoa.", "error");
+    replayFireworksButton.hidden = false;
+  } finally {
+    replayFireworksButton.disabled = false;
+    replayFireworksButton.textContent = "Bắn lại pháo hoa";
   }
+}
+
+function startFireworks(
+  wishes = lastSubmittedWish ? [lastSubmittedWish] : [],
+  mode = "submit",
+) {
+  if (!wishes.length) return;
+
+  const celebrationItems =
+    mode === "submit" ? getSubmitCelebrationItems(wishes[0]) : wishes;
 
   stopFireworks();
   resizeFireworksCanvas();
   celebration.classList.add("is-active");
   replayFireworksButton.hidden = true;
 
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    celebration.classList.add("is-reduced");
+    celebrationItems.forEach((item) => showCelebrationCard(item, 50, 50));
+    fireworksTimeout = window.setTimeout(() => {
+      stopFireworks();
+      replayFireworksButton.hidden = false;
+    }, Math.max(7000, celebrationItems.length * 1200));
+    return;
+  }
+
   const isMobile = window.innerWidth < 600;
   const columns = isMobile ? 4 : 8;
-  const launchCount = isMobile ? 16 : 30;
+  const baseLaunchCount = isMobile ? 16 : 30;
   const launchInterval = isMobile ? 330 : 290;
-  const featuredLaunches = isMobile ? [0, 6, 9, 15] : [2, 9, 16, 23];
+  const featuredLaunches =
+    mode === "submit"
+      ? isMobile
+        ? [0, 6, 13]
+        : [2, 12, 23]
+      : wishes.map((_, index) => index * 5 + 1);
+  const launchCount = Math.max(
+    baseLaunchCount,
+    featuredLaunches[featuredLaunches.length - 1] + 1,
+  );
 
   for (let index = 0; index < launchCount; index += 1) {
     const column = index % columns;
@@ -311,14 +342,13 @@ function startFireworks() {
     const delay = index * launchInterval + randomBetween(0, 180);
     const heightBand = index % 5;
     const contentIndex = featuredLaunches.indexOf(index);
+    const celebrationWish =
+      contentIndex < 0
+        ? null
+        : celebrationItems[contentIndex];
     launchTimeouts.push(
       window.setTimeout(
-        () =>
-          launchFirework(
-            xRatio,
-            heightBand,
-            contentIndex >= 0 ? lastCelebrationData[contentIndex] : null,
-          ),
+        () => launchFirework(xRatio, heightBand, celebrationWish),
         delay,
       ),
     );
@@ -329,6 +359,26 @@ function startFireworks() {
     celebration.classList.remove("is-active");
     replayFireworksButton.hidden = false;
   }, launchCount * launchInterval + 4600);
+}
+
+function getSubmitCelebrationItems(wish) {
+  return [
+    {
+      type: "field",
+      label: "Họ và tên",
+      value: wish.fullName,
+    },
+    {
+      type: "field",
+      label: "Ước nguyện",
+      value: wish.wish,
+    },
+    {
+      type: "image",
+      imageUrl: wish.imageUrl,
+      alt: `Ảnh của ${wish.fullName}`,
+    },
+  ];
 }
 
 function stopFireworks() {
@@ -350,7 +400,7 @@ function resizeFireworksCanvas() {
   fireworksContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
-function launchFirework(xRatio, heightBand = 0, celebrationItem = null) {
+function launchFirework(xRatio, heightBand = 0, celebrationWish = null) {
   const startX = window.innerWidth * xRatio;
   const heightRanges = [
     [0.06, 0.2],
@@ -374,16 +424,71 @@ function launchFirework(xRatio, heightBand = 0, celebrationItem = null) {
     targetY,
     color,
     brightness: randomBetween(0.72, 1),
-    celebrationItem,
+    celebrationWish,
   });
+}
+
+async function saveWish(wish) {
+  ensureWishDatabaseConfigured();
+
+  const table = encodeURIComponent(CONFIG.supabase.wishesTable);
+  const response = await fetch(`${CONFIG.supabase.url}/rest/v1/${table}`, {
+    method: "POST",
+    headers: getSupabaseHeaders({
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    }),
+    body: JSON.stringify({
+      full_name: wish.fullName,
+      wish: wish.wish,
+      image_url: wish.imageUrl,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(
+      detail.message || "Chưa thể lưu ước nguyện. Vui lòng thử lại.",
+    );
+  }
+}
+
+async function fetchAllWishes() {
+  ensureWishDatabaseConfigured();
+
+  const table = encodeURIComponent(CONFIG.supabase.wishesTable);
+  const query = "select=full_name,wish,image_url,created_at&order=created_at.asc";
+  const response = await fetch(`${CONFIG.supabase.url}/rest/v1/${table}?${query}`, {
+    headers: getSupabaseHeaders(),
+  });
+
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({}));
+    throw new Error(detail.message || "Chưa thể tải danh sách ước nguyện.");
+  }
+
+  const wishes = await response.json();
+  return wishes.map((wish) => ({
+    fullName: wish.full_name,
+    wish: wish.wish,
+    imageUrl: wish.image_url,
+  }));
+}
+
+function getSupabaseHeaders(extraHeaders = {}) {
+  return {
+    apikey: CONFIG.supabase.anonKey,
+    Authorization: `Bearer ${CONFIG.supabase.anonKey}`,
+    ...extraHeaders,
+  };
 }
 
 function explodeFirework(rocket) {
   const particleCount = window.innerWidth < 600 ? 58 : 82;
   const shapeRoll = Math.random();
 
-  if (rocket.celebrationItem) {
-    showCelebrationCard(rocket.celebrationItem, rocket.x, rocket.y);
+  if (rocket.celebrationWish) {
+    showCelebrationCard(rocket.celebrationWish, rocket.x, rocket.y);
   }
 
   for (let index = 0; index < particleCount; index += 1) {
@@ -417,24 +522,28 @@ function explodeFirework(rocket) {
 
 function showCelebrationCard(item, x, y) {
   const card = document.createElement("article");
-  card.className = `celebration-card${item.imageUrl ? " celebration-card--image" : ""}`;
 
-  if (item.imageUrl) {
-    const image = document.createElement("img");
-    image.src = item.imageUrl;
-    image.alt = item.alt;
-    card.append(image);
-  } else {
+  if (item.type === "field") {
     const label = document.createElement("span");
     const value = document.createElement("p");
+    card.className = "celebration-card celebration-card--field";
     label.className = "celebration-card__label";
     value.className = "celebration-card__value";
     label.textContent = item.label;
     value.textContent = item.value;
     card.append(label, value);
+  } else if (item.type === "image") {
+    const image = document.createElement("img");
+    card.className = "celebration-card celebration-card--image";
+    image.src = item.imageUrl;
+    image.alt = item.alt;
+    card.append(image);
+  } else {
+    appendPersonCard(card, item);
   }
 
-  const cardHalfWidth = item.imageUrl ? 105 : 150;
+  const cardHalfWidth =
+    item.type === "image" ? 105 : window.innerWidth < 480 ? 144 : 180;
   const safeX = Math.min(
     Math.max(x, cardHalfWidth + 16),
     window.innerWidth - cardHalfWidth - 16,
@@ -447,6 +556,23 @@ function showCelebrationCard(item, x, y) {
   if (!celebration.classList.contains("is-reduced")) {
     window.setTimeout(() => card.remove(), 4300);
   }
+}
+
+function appendPersonCard(card, wish) {
+  const image = document.createElement("img");
+  const content = document.createElement("div");
+  const name = document.createElement("strong");
+  const wishText = document.createElement("p");
+  card.className = "celebration-card celebration-card--person";
+  content.className = "celebration-card__content";
+  name.className = "celebration-card__name";
+  wishText.className = "celebration-card__wish";
+  image.src = wish.imageUrl;
+  image.alt = `Ảnh của ${wish.fullName}`;
+  name.textContent = wish.fullName;
+  wishText.textContent = wish.wish;
+  content.append(name, wishText);
+  card.append(image, content);
 }
 
 function animateFireworks() {
@@ -526,6 +652,16 @@ function ensureSupabaseConfigured() {
   ) {
     throw new Error(
       "Cần cấu hình Supabase trong biến môi trường trước khi tải ảnh.",
+    );
+  }
+}
+
+function ensureWishDatabaseConfigured() {
+  ensureSupabaseConfigured();
+
+  if (!CONFIG.supabase.wishesTable) {
+    throw new Error(
+      "Cần cấu hình bảng Supabase để lưu và phát lại ước nguyện.",
     );
   }
 }

@@ -4,6 +4,7 @@ const requiredVariables = [
   "SUPABASE_URL",
   "SUPABASE_ANON_KEY",
   "SUPABASE_BUCKET",
+  "SUPABASE_WISHES_TABLE",
   "GOOGLE_FORM_ACTION",
   "GOOGLE_FORM_FIELD_FULL_NAME",
   "GOOGLE_FORM_FIELD_PHONE",
@@ -22,6 +23,7 @@ const config = {
     url: process.env.SUPABASE_URL,
     anonKey: process.env.SUPABASE_ANON_KEY,
     bucket: process.env.SUPABASE_BUCKET,
+    wishesTable: process.env.SUPABASE_WISHES_TABLE,
   },
   googleForm: {
     action: process.env.GOOGLE_FORM_ACTION,
