@@ -16,6 +16,7 @@ const submitButton = document.querySelector("#submit-button");
 const formStatus = document.querySelector("#form-status");
 const fireworksCanvas = document.querySelector("#fireworks-canvas");
 const celebration = document.querySelector("#celebration");
+const celebrationContent = document.querySelector("#celebration-content");
 const replayFireworksButton = document.querySelector("#replay-fireworks");
 const fireworksContext = fireworksCanvas.getContext("2d");
 
@@ -25,6 +26,7 @@ let fireworksTimeout = 0;
 let launchTimeouts = [];
 let rockets = [];
 let sparks = [];
+let lastCelebrationData = null;
 
 const fireworkColors = [
   "#ff6b35",
@@ -85,7 +87,9 @@ form.addEventListener("submit", async (event) => {
   setFormStatus("Đang gửi lời ước nguyện của bạn...");
 
   try {
+    const submittedCelebrationData = getCelebrationData();
     await submitToGoogleForm();
+    lastCelebrationData = submittedCelebrationData;
     form.reset();
     resetUpload();
     setFormStatus("Ước nguyện đã được gửi. Cảm ơn bạn đã chia sẻ.", "success");
@@ -265,9 +269,28 @@ function setFormStatus(message, type = "") {
   formStatus.className = `form-status${type ? ` is-${type}` : ""}`;
 }
 
+function getCelebrationData() {
+  return [
+    { label: "Họ và tên", value: form.fullName.value.trim() },
+    { label: "Số điện thoại", value: form.phone.value.trim() },
+    { label: "Ước nguyện", value: form.wish.value.trim() },
+    {
+      label: "Khoảnh khắc của bạn",
+      imageUrl: imageUrlInput.value,
+      alt: `Ảnh của ${form.fullName.value.trim()}`,
+    },
+  ];
+}
+
 function startFireworks() {
+  if (!lastCelebrationData) return;
+
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    stopFireworks();
+    celebration.classList.add("is-active", "is-reduced");
+    lastCelebrationData.forEach((item) => showCelebrationCard(item, 50, 50));
     replayFireworksButton.hidden = true;
+    fireworksTimeout = window.setTimeout(stopFireworks, 7000);
     return;
   }
 
@@ -280,13 +303,25 @@ function startFireworks() {
   const columns = isMobile ? 4 : 8;
   const launchCount = isMobile ? 16 : 30;
   const launchInterval = isMobile ? 330 : 290;
+  const featuredLaunches = isMobile ? [0, 6, 9, 15] : [2, 9, 16, 23];
 
   for (let index = 0; index < launchCount; index += 1) {
     const column = index % columns;
     const xRatio = (column + 0.5 + randomBetween(-0.24, 0.24)) / columns;
     const delay = index * launchInterval + randomBetween(0, 180);
     const heightBand = index % 5;
-    launchTimeouts.push(window.setTimeout(() => launchFirework(xRatio, heightBand), delay));
+    const contentIndex = featuredLaunches.indexOf(index);
+    launchTimeouts.push(
+      window.setTimeout(
+        () =>
+          launchFirework(
+            xRatio,
+            heightBand,
+            contentIndex >= 0 ? lastCelebrationData[contentIndex] : null,
+          ),
+        delay,
+      ),
+    );
   }
 
   animateFireworks();
@@ -299,7 +334,8 @@ function startFireworks() {
 function stopFireworks() {
   cancelAnimationFrame(fireworksFrame);
   clearTimeout(fireworksTimeout);
-  celebration.classList.remove("is-active");
+  celebration.classList.remove("is-active", "is-reduced");
+  celebrationContent.replaceChildren();
   launchTimeouts.forEach(clearTimeout);
   launchTimeouts = [];
   rockets = [];
@@ -314,7 +350,7 @@ function resizeFireworksCanvas() {
   fireworksContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
 }
 
-function launchFirework(xRatio, heightBand = 0) {
+function launchFirework(xRatio, heightBand = 0, celebrationItem = null) {
   const startX = window.innerWidth * xRatio;
   const heightRanges = [
     [0.06, 0.2],
@@ -338,12 +374,17 @@ function launchFirework(xRatio, heightBand = 0) {
     targetY,
     color,
     brightness: randomBetween(0.72, 1),
+    celebrationItem,
   });
 }
 
 function explodeFirework(rocket) {
   const particleCount = window.innerWidth < 600 ? 58 : 82;
   const shapeRoll = Math.random();
+
+  if (rocket.celebrationItem) {
+    showCelebrationCard(rocket.celebrationItem, rocket.x, rocket.y);
+  }
 
   for (let index = 0; index < particleCount; index += 1) {
     const angle = (Math.PI * 2 * index) / particleCount + randomBetween(-0.035, 0.035);
@@ -371,6 +412,40 @@ function explodeFirework(rocket) {
       size: randomBetween(1.1, 2.2),
       twinkle: Math.random() > 0.62,
     });
+  }
+}
+
+function showCelebrationCard(item, x, y) {
+  const card = document.createElement("article");
+  card.className = `celebration-card${item.imageUrl ? " celebration-card--image" : ""}`;
+
+  if (item.imageUrl) {
+    const image = document.createElement("img");
+    image.src = item.imageUrl;
+    image.alt = item.alt;
+    card.append(image);
+  } else {
+    const label = document.createElement("span");
+    const value = document.createElement("p");
+    label.className = "celebration-card__label";
+    value.className = "celebration-card__value";
+    label.textContent = item.label;
+    value.textContent = item.value;
+    card.append(label, value);
+  }
+
+  const cardHalfWidth = item.imageUrl ? 105 : 150;
+  const safeX = Math.min(
+    Math.max(x, cardHalfWidth + 16),
+    window.innerWidth - cardHalfWidth - 16,
+  );
+  const safeY = Math.min(Math.max(y, 100), window.innerHeight - 120);
+  card.style.left = `${safeX}px`;
+  card.style.top = `${safeY}px`;
+  celebrationContent.append(card);
+
+  if (!celebration.classList.contains("is-reduced")) {
+    window.setTimeout(() => card.remove(), 4300);
   }
 }
 

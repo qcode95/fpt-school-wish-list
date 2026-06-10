@@ -38,8 +38,10 @@ confirm that it dispatched the request, but cannot read Google's response.
 Verify the first real submission in the linked Google Sheet.
 
 After a successful submission, the page runs a full-screen canvas fireworks
-celebration and exposes a replay button when the animation ends. The effect is
-disabled automatically for visitors who prefer reduced motion.
+celebration. Four featured bursts reveal the submitted name, phone number,
+wish, and uploaded image, and a replay button appears when the animation ends.
+Visitors who prefer reduced motion see the same information in a static
+celebration summary.
 
 ## Supabase checklist
 
